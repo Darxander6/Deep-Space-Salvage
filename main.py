@@ -42,6 +42,8 @@ class Scrap():
         for i in self.modifiers:
             if i in self.modifier_types:
                 self.value += self.modifier_types[i]
+    def update(self):
+        self.x -= 1
     def draw(self,screen):
         pygame.draw.circle(screen,(50,50,50)(int(self.x), int(self.y)), self.radius)
     
@@ -52,7 +54,7 @@ class Scrap():
 
 class Game():
     def __init__(self):
-
+        self.scrap = []
         pygame.init()
 
         pygame.display.set_caption("Deep Space Salvage")
@@ -74,6 +76,7 @@ class Game():
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.running = False
+    def create_scrap():
     def update(self):
         self.player.handle_input()
     def draw(self):
