@@ -1,8 +1,12 @@
 import pygame
 import sys
+import random
+
+
 screen_width = 800
 screen_height = 600
 fps = 60
+
 class Player():
     def __init__(self,x,y):
         self.speed = 5
@@ -27,9 +31,11 @@ class Player():
         self.y = max(self.height, min(screen_width - self.height, self.y))
     def draw(self,screen):
         pygame.draw.rect(screen,"white", pygame.Rect( self.x, self.y,self.width, self.height))
+
+
 class Scrap():
-    def init(self,type,x,y,radius,size,modifiers):
-        self.modifier_types = {"shiny":1.5,"dirty":.75,"cracked":.5,"dense":2}
+    def __init__(self,type,x,y,radius,modifiers):
+        self.modifier_types = {"":1,"shiny":1.5,"dirty":.75,"cracked":.5,"dense":2}
         self.type = type
         self.x = x
         self.y = y
@@ -41,11 +47,11 @@ class Scrap():
         self.value += self.value_conversion[self.type.lower()]
         for i in self.modifiers:
             if i in self.modifier_types:
-                self.value += self.modifier_types[i]
+                self.value *= self.modifier_types[i]
     def update(self):
-        self.x -= 1
+        self.y += 1
     def draw(self,screen):
-        pygame.draw.circle(screen,(50,50,50)(int(self.x), int(self.y)), self.radius)
+        pygame.draw.circle(screen,(50,50,50),(int(self.x), int(self.y)), self.radius)
     
             
 
@@ -62,9 +68,12 @@ class Game():
         self.player = Player(screen_width /2,screen_height /2)
         self.running = True
         self.clock = pygame.time.Clock()
+        self.types_scrap = ["iron","copper","gold","diamond"]
+        self.modifiers = ["shiny","dirty","cracked","dense"]
     def run(self):
         while self.running:
             self.handle_events()
+            self.create_scrap()
             self.update()
             self.draw()
             self.clock.tick(fps)
@@ -76,11 +85,52 @@ class Game():
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.running = False
-    def create_scrap():
+    def create_scrap(self):
+        modifier = []
+        scrap_type = ""
+        type_decider = random.randint(1,100)
+        
+        if type_decider >40 :
+            # sets it to copper
+            scrap_type = self.types_scrap[1]
+        elif type_decider > 15:
+            # sets it to iron
+            scrap_type = self.types_scrap[0]
+        elif type_decider >5:
+            # sets it to gold
+
+            scrap_type = self.types_scrap[2]
+        else:
+            # sets it to diamond
+
+            scrap_type = self.types_scrap[3]
+
+        for i in range(3):
+            type_decider = random.randint(1,100)
+            if type_decider >40 and type_decider< 50:
+                modifier.append("shiny")
+            elif type_decider > 30:
+                modifier.append("dirty")
+            elif type_decider > 20:
+                modifier.append("cracked")
+            elif type_decider > 10:
+                modifier.append("dense")
+            else:
+                modifier.append("")
+
+
+
+        new_scrap = Scrap(scrap_type,random.randint(1,800),0,random.randint(20,50),modifier)
+        self.scrap.append(new_scrap)
+
     def update(self):
         self.player.handle_input()
+        for i in self.scrap:
+            i.update()
     def draw(self):
         self.screen.fill((0,0,0))
+        for i in self.scrap:
+            i.draw(self.screen)
         self.player.draw(self.screen)
         
         pygame.display.flip()
