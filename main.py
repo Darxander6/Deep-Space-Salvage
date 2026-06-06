@@ -43,6 +43,7 @@ class Scrap():
         self.value_conversion ={"iron":50,"copper":1,"gold":100,"diamond":500}
         self.modifiers = modifiers
         self.value =0
+        self.color = (50,50,50)
     def get_value(self):
         self.value += self.value_conversion[self.type.lower()]
         for i in self.modifiers:
@@ -50,7 +51,10 @@ class Scrap():
                 self.value *= self.modifier_types[i]
     def update(self):
         self.y += 1
+
     def draw(self,screen):
+        if self.type == "iron":
+            self.color = "Bronze"
         pygame.draw.circle(screen,(50,50,50),(int(self.x), int(self.y)), self.radius)
     
             
@@ -70,6 +74,8 @@ class Game():
         self.clock = pygame.time.Clock()
         self.types_scrap = ["iron","copper","gold","diamond"]
         self.modifiers = ["shiny","dirty","cracked","dense"]
+        self.spawn_rate=2000
+        self.spawn_timer =0
     def run(self):
         while self.running:
             self.handle_events()
@@ -125,8 +131,14 @@ class Game():
 
     def update(self):
         self.player.handle_input()
+        self.spawn_timer += 1  
+        
+        if self.spawn_timer >= self.spawn_rate:
+            self.create_scrap()   
+            self.spawn_timer = 0
         for i in self.scrap:
             i.update()
+                
     def draw(self):
         self.screen.fill((0,0,0))
         for i in self.scrap:
