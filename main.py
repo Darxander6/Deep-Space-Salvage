@@ -117,6 +117,7 @@ class Game():
         self.scrap_display = self.font.render(f"Your amount of scrap is {len(self.player.scrap)}",True,"blue") 
         self.cash_display = self.font.render(f"Your amount of cash is {self.player.cash}",True,"blue")
         self.break_up_time =0
+
     def run(self):
         while self.running:
             self.handle_events()
