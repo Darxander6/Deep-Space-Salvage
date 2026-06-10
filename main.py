@@ -42,8 +42,8 @@ class Player():
         if keys[pygame.K_s] or keys[pygame.K_DOWN]:
             self.base_rect.y += self.speed
         
-        if self.base_rect.x >screen_height+110:
-            self.base_rect.x = screen_height+110
+        if self.base_rect.x >screen_width-110:
+            self.base_rect.x = screen_width -110
         if self.base_rect.x <0:
             self.base_rect.x = 0
         self.base_rect.y = max(self.height, min(screen_width - self.height, self.base_rect.y))
@@ -128,14 +128,21 @@ class Game():
         self.start_button_rect = self.start_button.get_rect()
         self.start_button_rect.center = (screen_width // 2, screen_height // 3)
 
+        self.hover_start =False
+
+
+        self.start_button_hover = pygame.image.load("Assets/start_button_hover.png").convert_alpha()
+        self.start_button_hover = pygame.transform.scale(self.start_button_hover,(300,225))
+
+
         self.sell_button = pygame.image.load("Assets/sell_button.png").convert_alpha()
         self.sell_button = pygame.transform.scale(self.sell_button,(300,225))
-        self.sell_button_rect = self.start_button.get_rect()
+        self.sell_button_rect = self.sell_button.get_rect()
         self.sell_button_rect.center = (screen_width -100, screen_height -500)
 
         self.menu_button =  pygame.image.load("Assets/menu_button.png").convert_alpha()
         self.menu_button = pygame.transform.scale(self.sell_button,(300,225))
-
+        self.mouse_position =pygame.mouse.get_pos()
     def run(self):
         while self.running:
             self.handle_events()
@@ -150,8 +157,14 @@ class Game():
 
     def handle_events(self):
         for event in pygame.event.get():
+
             if event.type == pygame.QUIT:
                 self.running = False
+            self.mouse_position =pygame.mouse.get_pos()
+            if self.start_button_rect.collidepoint(self.mouse_position):
+                self.hover_start = True
+            else:
+                self.hover_start= False
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if event.button == 1:
                     if self.start_button_rect.collidepoint(event.pos):
@@ -210,7 +223,7 @@ class Game():
         for i in self.player.scrap:
             
             self.player.cash += i.get_value()
-            self.player.scrap.remove(i)
+        self.player.scrap.clear()
         self.cash_display = self.font.render(f"Your amount of cash is {self.player.cash}",True,"blue")
 
     def update(self):
@@ -238,7 +251,10 @@ class Game():
         self.screen.blit(self.background,(0,0))
 
         if self.in_start == True:
-            self.screen.blit(self.start_button,self.start_button_rect)
+            if self.hover_start:
+                self.screen.blit(self.start_button_hover,self.start_button_rect) 
+            else:
+                self.screen.blit(self.start_button,self.start_button_rect)
         else:
             for i in self.scrap:
                 i.draw(self.screen)
