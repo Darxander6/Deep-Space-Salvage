@@ -88,6 +88,8 @@ class Scrap():
         for i in self.modifiers:
             if i in self.modifier_types:
                 self.value *= self.modifier_types[i]
+        return self.value
+        
 
     def update(self):
         self.rect.y += 2
@@ -117,10 +119,27 @@ class Game():
         self.scrap_display = self.font.render(f"Your amount of scrap is {len(self.player.scrap)}",True,"blue") 
         self.cash_display = self.font.render(f"Your amount of cash is {self.player.cash}",True,"blue")
         self.break_up_time =0
+        self.in_start = True
+        
+        self.background = pygame.image.load("Assets/Background.png").convert_alpha()
+
+        self.start_button = pygame.image.load("Assets/start_button.png").convert_alpha()
+        self.start_button = pygame.transform.scale(self.start_button,(300,225))
+        self.start_button_rect = self.start_button.get_rect()
+        self.start_button_rect.center = (screen_width // 2, screen_height // 3)
+
+        self.sell_button = pygame.image.load("Assets/sell_button.png").convert_alpha()
+        self.sell_button = pygame.transform.scale(self.sell_button,(300,225))
+        self.sell_button_rect = self.start_button.get_rect()
+        self.sell_button_rect.center = (screen_width -100, screen_height -500)
+
+        self.menu_button =  pygame.image.load("Assets/menu_button.png").convert_alpha()
+        self.menu_button = pygame.transform.scale(self.sell_button,(300,225))
 
     def run(self):
         while self.running:
             self.handle_events()
+            
             self.create_scrap()
             self.update()
             self.draw()
@@ -133,75 +152,102 @@ class Game():
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.running = False
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if event.button == 1:
+                    if self.start_button_rect.collidepoint(event.pos):
+                        self.in_start = False
+                    if self.sell_button_rect.collidepoint(event.pos):
+                        print("i")
+                        self.sell()
     def create_scrap(self):
-        self.break_up_time+=1
-        if self.break_up_time % 17 == 0:
-            modifier = []
-            scrap_type = ""
-            type_decider = random.randint(1,1000)
-            
-            if type_decider >200 :
-                # sets it to copper
-                scrap_type = self.types_scrap[1]
-            elif type_decider > 20:
-                # sets it to iron
-                scrap_type = self.types_scrap[0]
-            elif type_decider >1:
-                # sets it to gold
-
-                scrap_type = self.types_scrap[2]
-            else:
-                # sets it to diamond
-
-                scrap_type = self.types_scrap[3]
-
-
-            type_decider = random.randint(1,100)
-            if type_decider >40 and type_decider< 50:
-                modifier.append("shiny")
-            elif type_decider > 30:
-                modifier.append("dirty")
-            elif type_decider > 20:
-                modifier.append("cracked")
-            elif type_decider > 10:
-                modifier.append("dense")
-            else:
-                modifier.append("")
-
-
-
-            new_scrap = Scrap(scrap_type,random.randint(1,800),0,random.randint(10,30),modifier)
-            self.scrap.append(new_scrap)
-            self.break_up_time =0
-        else:
+        if self.in_start == True:
             pass
+        else:
+            self.break_up_time+=1
+            if self.break_up_time % 17 == 0:
+                modifier = []
+                scrap_type = ""
+                type_decider = random.randint(1,1000)
+                
+                if type_decider >200 :
+                    # sets it to copper
+                    scrap_type = self.types_scrap[1]
+                elif type_decider > 20:
+                    # sets it to iron
+                    scrap_type = self.types_scrap[0]
+                elif type_decider >1:
+                    # sets it to gold
+
+                    scrap_type = self.types_scrap[2]
+                else:
+                    # sets it to diamond
+
+                    scrap_type = self.types_scrap[3]
+
+
+                type_decider = random.randint(1,100)
+                if type_decider >40 and type_decider< 50:
+                    modifier.append("shiny")
+                elif type_decider > 30:
+                    modifier.append("dirty")
+                elif type_decider > 20:
+                    modifier.append("cracked")
+                elif type_decider > 10:
+                    modifier.append("dense")
+                else:
+                    modifier.append("")
+
+
+
+                new_scrap = Scrap(scrap_type,random.randint(1,800),0,random.randint(10,30),modifier)
+                self.scrap.append(new_scrap)
+                self.break_up_time =0
+            else:
+                pass
+    def sell(self):
+        
+        print("b")
+        for i in self.player.scrap:
+            
+            self.player.cash += i.get_value()
+            self.player.scrap.remove(i)
+        self.cash_display = self.font.render(f"Your amount of cash is {self.player.cash}",True,"blue")
 
     def update(self):
-        self.player.handle_input()
-        self.spawn_timer += 1  
-        self.scrap_display = self.font.render(f"Your amount of scrap is {len(self.player.scrap)}",True,"blue")
-        if self.spawn_timer >= self.spawn_rate:
-            self.create_scrap()   
-            self.spawn_timer = 0
-        for i in self.scrap:
-            i.update()
+        if self.in_start == True:
+            pass
+        else:
+            self.player.handle_input()
+            self.spawn_timer += 1  
+            self.scrap_display = self.font.render(f"Your amount of scrap is {len(self.player.scrap)}",True,"blue")
+            if self.spawn_timer >= self.spawn_rate:
+                self.create_scrap()   
+                self.spawn_timer = 0
+            for i in self.scrap:
+                i.update()
 
-            if i.rect.y > screen_height-35:
-                self.scrap.remove(i)
+                if i.rect.y > screen_height-35:
+                    self.scrap.remove(i)
 
-            if self.player.handle_rect.colliderect(i.rect):
-                self.scrap.remove(i)
-                self.player.scrap.append(i)
-                
+                if self.player.handle_rect.colliderect(i.rect):
+                    self.scrap.remove(i)
+                    self.player.scrap.append(i)
+                    
         
     def draw(self):
-        self.screen.fill("red")
-        for i in self.scrap:
-            i.draw(self.screen)
-        self.player.draw(self.screen)
+        self.screen.blit(self.background,(0,0))
 
-        self.screen.blit(self.scrap_display,(5,20))
-        self.screen.blit(self.cash_display,(5,55))
+        if self.in_start == True:
+            self.screen.blit(self.start_button,self.start_button_rect)
+        else:
+            for i in self.scrap:
+                i.draw(self.screen)
+            self.player.draw(self.screen)
+            
+            self.screen.blit(self.sell_button,self.sell_button_rect)
+            self.screen.blit(self.scrap_display,(5,20))
+            self.screen.blit(self.cash_display,(5,55))
+            
         
         pygame.display.flip()
 mygame =Game()
