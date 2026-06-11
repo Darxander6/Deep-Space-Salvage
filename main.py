@@ -57,6 +57,11 @@ class Player():
         
 
 
+class Drone():
+    def __init__(self,x,y):
+        self.x = x
+        self.x = y
+
 
 class Scrap():
     def __init__(self,type,x,y,radius,modifiers):
@@ -121,27 +126,38 @@ class Game():
         self.break_up_time =0
         self.in_start = True
         
+        
         self.background = pygame.image.load("Assets/Background.png").convert_alpha()
+
+        self.hover_start =False
+        
+        self.in_menu = False
+
 
         self.start_button = pygame.image.load("Assets/start_button.png").convert_alpha()
         self.start_button = pygame.transform.scale(self.start_button,(300,225))
         self.start_button_rect = self.start_button.get_rect()
         self.start_button_rect.center = (screen_width // 2, screen_height // 3)
 
-        self.hover_start =False
-
+        
+        self.sold_text_lines = []     
+        self.sell_timer = 0           
+        self.sell_timer_duration = 2 * fps
 
         self.start_button_hover = pygame.image.load("Assets/start_button_hover.png").convert_alpha()
         self.start_button_hover = pygame.transform.scale(self.start_button_hover,(300,225))
 
-
+        
         self.sell_button = pygame.image.load("Assets/sell_button.png").convert_alpha()
-        self.sell_button = pygame.transform.scale(self.sell_button,(300,225))
+        self.sell_button = pygame.transform.scale(self.sell_button,(150,100))
         self.sell_button_rect = self.sell_button.get_rect()
-        self.sell_button_rect.center = (screen_width -100, screen_height -500)
+        self.sell_button_rect.center = (screen_width -100, screen_height -300)
 
         self.menu_button =  pygame.image.load("Assets/menu_button.png").convert_alpha()
-        self.menu_button = pygame.transform.scale(self.sell_button,(300,225))
+        self.menu_button = pygame.transform.scale(self.menu_button,(150,175))
+        self.menu_button_rect = self.menu_button.get_rect()
+        self.menu_button_rect.center = (screen_width -100, screen_height -500)
+
         self.mouse_position =pygame.mouse.get_pos()
     def run(self):
         while self.running:
@@ -169,9 +185,16 @@ class Game():
                 if event.button == 1:
                     if self.start_button_rect.collidepoint(event.pos):
                         self.in_start = False
-                    if self.sell_button_rect.collidepoint(event.pos):
-                        print("i")
-                        self.sell()
+                    if self.in_start:
+                        pass
+                    else:
+                        if self.menu_button_rect.collidepoint(event.pos):
+                            self.in_menu = not self.in_menu
+                        if self.in_menu:
+                            if self.sell_button_rect.collidepoint(event.pos):
+                                self.sell()
+                            
+                    
     def create_scrap(self):
         if self.in_start == True:
             pass
@@ -212,39 +235,79 @@ class Game():
 
 
 
-                new_scrap = Scrap(scrap_type,random.randint(1,800),0,random.randint(10,30),modifier)
+                new_scrap = Scrap(scrap_type,random.randint(75,screen_width-75),0,random.randint(10,30),modifier)
                 self.scrap.append(new_scrap)
                 self.break_up_time =0
             else:
                 pass
     def sell(self):
+        if not self.player.scrap:
+            return  
+
+        amounts = {}
+        total_cash_gained = 0
         
-        print("b")
-        for i in self.player.scrap:
+       
+        for item in self.player.scrap:
+            value_gained = item.get_value()
+            self.player.cash += value_gained
+            total_cash_gained += value_gained
             
-            self.player.cash += i.get_value()
+            
+            mod_str = item.modifiers[0] if item.modifiers and item.modifiers[0] != "" else ""
+            item_type = item.type
+            
+            
+            key = (mod_str, item_type)
+            amounts[key] = amounts.get(key, 0) + 1
+
+        
+        self.sold_text_lines = []
+        
+      
+        for (modifier, item_type), amount in amounts.items():
+            
+            mod_display = f"{modifier} " if modifier else ""
+            
+
+            type_display = f"{item_type}s" if amount > 1 else item_type
+            
+
+            text_string = f"You sold {amount} {mod_display} {type_display}"
+            self.sold_text_lines.append(text_string)
+            
+
+        self.sold_text_lines.append(f"Total Gained: +${total_cash_gained}")
+
+
         self.player.scrap.clear()
-        self.cash_display = self.font.render(f"Your amount of cash is {self.player.cash}",True,"blue")
+        self.cash_display = self.font.render(f"Your amount of cash is {self.player.cash}", True, "blue")
+        self.sell_timer = self.sell_timer_duration 
 
     def update(self):
         if self.in_start == True:
-            pass
+            return
+        if self.sell_timer > 0:
+            self.sell_timer -= 1
         else:
-            self.player.handle_input()
-            self.spawn_timer += 1  
-            self.scrap_display = self.font.render(f"Your amount of scrap is {len(self.player.scrap)}",True,"blue")
-            if self.spawn_timer >= self.spawn_rate:
-                self.create_scrap()   
-                self.spawn_timer = 0
-            for i in self.scrap:
-                i.update()
+            if self.in_menu:
+                pass
+            else:
+                self.player.handle_input()
+                self.spawn_timer += 1  
+                self.scrap_display = self.font.render(f"Your amount of scrap is {len(self.player.scrap)}",True,"blue")
+                if self.spawn_timer >= self.spawn_rate:
+                    self.create_scrap()   
+                    self.spawn_timer = 0
+                for i in self.scrap[:]:
+                    i.update()
 
-                if i.rect.y > screen_height-35:
-                    self.scrap.remove(i)
+                    if i.rect.y > screen_height-35:
+                        self.scrap.remove(i)
 
-                if self.player.handle_rect.colliderect(i.rect):
-                    self.scrap.remove(i)
-                    self.player.scrap.append(i)
+                    if self.player.handle_rect.colliderect(i.rect):
+                        self.scrap.remove(i)
+                        self.player.scrap.append(i)
                     
         
     def draw(self):
@@ -256,15 +319,28 @@ class Game():
             else:
                 self.screen.blit(self.start_button,self.start_button_rect)
         else:
-            for i in self.scrap:
-                i.draw(self.screen)
-            self.player.draw(self.screen)
-            
-            self.screen.blit(self.sell_button,self.sell_button_rect)
+            self.screen.blit(self.menu_button,self.menu_button_rect)
             self.screen.blit(self.scrap_display,(5,20))
             self.screen.blit(self.cash_display,(5,55))
+            if self.in_menu:
+
+                self.screen.blit(self.sell_button,self.sell_button_rect)
+                
+            else:
+
+                for i in self.scrap:
+                    i.draw(self.screen)
+                self.player.draw(self.screen)
+                
+
             
-        
+        if self.sell_timer > 0:
+            start_y = 150  
+            for text_line in self.sold_text_lines:
+                text_surface = self.font.render(text_line, True, "blue")
+                text_rect = text_surface.get_rect(center=(screen_width // 2, start_y))
+                self.screen.blit(text_surface, text_rect)
+                start_y += 40
         pygame.display.flip()
 mygame =Game()
 mygame.run()
