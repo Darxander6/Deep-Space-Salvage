@@ -1,7 +1,7 @@
 import pygame
 import sys
 import random
-
+import math
 
 screen_width = 800
 screen_height = 600
@@ -15,19 +15,19 @@ class Player():
         self.height = 70
         self.scrap = []
         self.cash=0
-        raw_player = pygame.image.load("Assets/Player.png").convert_alpha()
+        raw_player = pygame.image.load("Assets/sprites/Player.png").convert_alpha()
         self.base_image = pygame.transform.smoothscale(raw_player, (self.width, self.height))
-        self.base_rect = pygame.image.load("Assets/Player.png").get_rect()
+        self.base_rect = pygame.image.load("Assets/sprites/Player.png").get_rect()
         self.base_rect.x = x
         self.base_rect.y = y
         grabber_width =40
        
         grabber_height =40
-        raw_grabber = pygame.image.load("Assets/Grabber.png").convert_alpha()
+        raw_grabber = pygame.image.load("Assets/sprites/Grabber.png").convert_alpha()
 
         self.handle = pygame.transform.smoothscale(raw_grabber, (grabber_width, grabber_height))
         self.handle_rect = self.handle.get_rect()
-        self.handle_rect = pygame.image.load("Assets/Grabber.png").get_rect()
+        self.handle_rect = pygame.image.load("Assets/sprites/Grabber.png").get_rect()
         self.handle_rect.centerx = self.base_rect.centerx
         self.handle_rect.y = self.base_rect.y -30
 
@@ -58,11 +58,68 @@ class Player():
 
 
 class Drone():
-    def __init__(self,x,y):
+    def __init__(self,x = screen_width//2+random.randint(-30,30),y=screen_height//2+random.randint(-30,30)):
         self.x = x
-        self.x = y
+        self.y = y
+        self.level = 1
+        self.max_level = 5
+        self.upgrade_stats = {
+            1: {"speed": 2, "radius": 20, "modifier": 1.0},
+            2: {"speed": 5, "radius": 40, "modifier": 1.0},
+            3: {"speed": 5, "radius": 75, "modifier": 1.2},
+            4: {"speed": 7, "radius": 90, "modifier": 1.5},
+            5: {"speed": 10, "radius": 150, "modifier": 2.0}
+        }
+        self.update_stats()
+        if self.level ==1:
+            self.raw_drone = pygame.image.load("Assets/sprites/drone_upgrade1.png").convert_alpha()
+        self.image = pygame.transform.smoothscale(self.raw_drone, (50, 50))
+        self.rect = self.image.get_rect(center=(self.x, self.y))
+    def update_stats(self):
+            stats = self.upgrade_stats[self.level]
+            self.speed = stats["speed"]
+            self.pickup_radius = stats["radius"]
+            self.value_modifier = stats["modifier"]
+    def upgrade_level(self):
+        if self.level <self.max_level:
+            self.level+=1
+            self.update_stats()
+        else:
+            pass
+    def fly_to_target(self,scrap_list):
+        if not scrap_list:
+            return
+        closest_scrap = None
+        closest_dist = float("inf")
+        for scrap in scrap_list:
+            dx = self.rect.centerx - scrap.rect.centerx
+            dy = self.rect.centerx - scrap.rect.centerx
+            distance = math.sqrt((dx ** 2)+(dy ** 2))
+            if distance < closest_dist:
+                closest_dist = distance
+                closest_scrap = scrap
+        if closest_scrap:
+            dx = closest_scrap.rect.centerx - self.rect.centerx
+            dy = closest_scrap.rect.centery - self.rect.centery
+            if closest_dist != 0:
+                self.rect.x += (dx / closest_dist) * self.speed
+                self.rect.y += (dy / closest_dist) * self.speed
+    def check_pickup(self, scrap_list, player_inventory):
+        for scrap in scrap_list[:]: 
+            dx = scrap.rect.centerx - self.rect.centerx
+            dy = scrap.rect.centery - self.rect.centery
+            distance = math.hypot(dx, dy)
 
+   
+            if distance <= self.pickup_radius:
+                scrap_list.remove(scrap)
+                
+                scrap.value *= self.value_modifier 
 
+                player_inventory.append(scrap)
+
+    def draw(self, screen):
+        screen.blit(self.image, self.rect)
 class Scrap():
     def __init__(self,type,x,y,radius,modifiers):
         self.modifier_types = {"":1,"shiny":1.5,"dirty":.75,"cracked":.5,"dense":2}
@@ -75,13 +132,13 @@ class Scrap():
         self.value =0
         self.color = (50,50,50)
         if self.type == "diamond":
-            raw_image = pygame.image.load("Assets/Diamond_scrap_normal.png").convert_alpha()
+            raw_image = pygame.image.load("Assets/sprites/Diamond_scrap_normal.png").convert_alpha()
         elif self.type == "gold":
-            raw_image = pygame.image.load("Assets/Gold scrap.png").convert_alpha()
+            raw_image = pygame.image.load("Assets/sprites/Gold scrap.png").convert_alpha()
         elif self.type == "iron":
-            raw_image = pygame.image.load("Assets/Iron_scrap_normal.png").convert_alpha()
+            raw_image = pygame.image.load("Assets/sprites/Iron_scrap_normal.png").convert_alpha()
         else:
-            raw_image = pygame.image.load("Assets/copper_scrap_normal.png").convert_alpha()
+            raw_image = pygame.image.load("Assets/sprites/copper_scrap_normal.png").convert_alpha()
         diameter = self.radius * 2
         self.image = pygame.transform.scale(raw_image, (diameter, diameter))
         self.rect = self.image.get_rect()
@@ -109,6 +166,7 @@ class Scrap():
 class Game():
     def __init__(self):
         self.scrap = []
+        self.drones= []
         pygame.init()
 
         pygame.display.set_caption("Deep Space Salvage")
@@ -127,14 +185,14 @@ class Game():
         self.in_start = True
         
         
-        self.background = pygame.image.load("Assets/Background.png").convert_alpha()
+        self.background = pygame.image.load("Assets/sprites/Background.png").convert_alpha()
 
         self.hover_start =False
         
         self.in_menu = False
 
 
-        self.start_button = pygame.image.load("Assets/start_button.png").convert_alpha()
+        self.start_button = pygame.image.load("Assets/sprites/start_button.png").convert_alpha()
         self.start_button = pygame.transform.scale(self.start_button,(300,225))
         self.start_button_main = self.start_button
         self.start_button_rect = self.start_button.get_rect()
@@ -145,28 +203,37 @@ class Game():
         self.sell_timer = 0           
         self.sell_timer_duration = 2 * fps
 
-        self.start_button_hover = pygame.image.load("Assets/start_button_hover.png").convert_alpha()
+        self.start_button_hover = pygame.image.load("Assets/sprites/start_button_hover.png").convert_alpha()
         self.start_button_hover = pygame.transform.scale(self.start_button_hover,(300,225))
 
-        
-        self.sell_button = pygame.image.load("Assets/sell_button.png").convert_alpha()
-        self.sell_button = pygame.transform.scale(self.sell_button,(150,100))
-        self.sell_button_main = self.sell_button
-        self.sell_button_rect = self.sell_button.get_rect()
-        self.sell_button_rect.center = (screen_width -100, screen_height -300)
-        self.sell_button_hover = pygame.image.load("Assets/sell_button_hover.png")
-        self.sell_button_hover= pygame.transform.scale(self.sell_button_hover,(150,100))
 
         
 
-        self.menu_button =  pygame.image.load("Assets/menu_button.png").convert_alpha()
+        self.menu_button =  pygame.image.load("Assets/sprites/menu_button.png").convert_alpha()
         self.menu_button = pygame.transform.scale(self.menu_button,(150,175))
         self.menu_button_main = self.menu_button
         self.menu_button_rect = self.menu_button.get_rect()
         self.menu_button_rect.center = (screen_width -100, screen_height -500)
-        self.menu_button_hover = pygame.image.load("Assets/menu_button_hover.png")
+        self.menu_button_hover = pygame.image.load("Assets/sprites/menu_button_hover.png")
         self.menu_button_hover= pygame.transform.scale(self.menu_button_hover,(150,100))
+
         
+        self.sell_button = pygame.image.load("Assets/sprites/sell_button.png").convert_alpha()
+        self.sell_button = pygame.transform.scale(self.sell_button,(150,100))
+        self.sell_button_main = self.sell_button
+        self.sell_button_rect = self.sell_button.get_rect()
+        self.sell_button_rect.center = (screen_width -100, screen_height -300)
+        self.sell_button_hover = pygame.image.load("Assets/sprites/sell_button_hover.png")
+        self.sell_button_hover= pygame.transform.scale(self.sell_button_hover,(150,100))
+
+        self.buy_drone_button = pygame.image.load("Assets/sprites/buy_drone_button.png").convert_alpha()
+        self.buy_drone_button = pygame.transform.scale(self.buy_drone_button,(150,100))
+        self.buy_drone_button_main = self.buy_drone_button
+        self.buy_drone_button_rect = self.buy_drone_button.get_rect()
+        self.buy_drone_button_rect.center = (screen_width -100, screen_height -200)
+        self.buy_drone_button_hover = pygame.image.load("Assets/sprites/buy_drone_button_hover.png")
+        self.buy_drone_button_hover= pygame.transform.scale(self.buy_drone_button_hover,(150,100))
+
         self.mouse_position =pygame.mouse.get_pos()
     def run(self):
         while self.running:
@@ -195,11 +262,16 @@ class Game():
 
             else:
                 self.sell_button_main = self.sell_button
-            if self.menu_button_rect.collidepoint(self.mouse_position):
-                self.sell_button_main = self.sell_button_hover
+            if self.buy_drone_button_rect.collidepoint(self.mouse_position):
+                self.buy_drone_button_main = self.buy_drone_button_hover
 
             else:
-                self.sell_button_main = self.sell_button
+                self.buy_drone_button_main = self.buy_drone_button
+            if self.menu_button_rect.collidepoint(self.mouse_position):
+                self.menu_button_main = self.menu_button_hover
+
+            else:
+                self.menu_button_main = self.menu_button
 
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if event.button == 1:
@@ -213,8 +285,13 @@ class Game():
                         if self.in_menu:
                             if self.sell_button_rect.collidepoint(event.pos):
                                 self.sell()
+                            if self.buy_drone_button_rect.collidepoint(event.pos):
+                                self.buy_drone()
                             
-                    
+    def buy_drone(self):
+        drone = Drone()
+        self.drones.append(drone)
+
     def create_scrap(self):
         if self.in_start == True:
             pass
@@ -319,15 +396,18 @@ class Game():
                 if self.spawn_timer >= self.spawn_rate:
                     self.create_scrap()   
                     self.spawn_timer = 0
-                for i in self.scrap[:]:
-                    i.update()
+                for scrap in self.scrap[:]:
+                    scrap.update()
 
-                    if i.rect.y > screen_height-35:
-                        self.scrap.remove(i)
+                    if scrap.rect.y > screen_height-35:
+                        self.scrap.remove(scrap)
 
-                    if self.player.handle_rect.colliderect(i.rect):
-                        self.scrap.remove(i)
-                        self.player.scrap.append(i)
+                    if self.player.handle_rect.colliderect(scrap.rect):
+                        self.scrap.remove(scrap)
+                        self.player.scrap.append(scrap)
+                for drone in self.drones:
+                    drone.fly_to_target(self.scrap)
+                    drone.check_pickup(self.scrap,self.player.scrap)
                     
         
     def draw(self):
@@ -337,17 +417,21 @@ class Game():
 
                 self.screen.blit(self.start_button_main,self.start_button_rect)
         else:
-            self.screen.blit(self.menu_button,self.menu_button_rect)
+            self.screen.blit(self.menu_button_main,self.menu_button_rect)
             self.screen.blit(self.scrap_display,(5,20))
             self.screen.blit(self.cash_display,(5,55))
             if self.in_menu:
 
                 self.screen.blit(self.sell_button_main,self.sell_button_rect)
+                self.screen.blit(self.buy_drone_button_main,self.buy_drone_button_rect)
+
                 
             else:
+                for scrap in self.scrap:
+                    scrap.draw(self.screen)
+                for drone in self.drones:
+                    drone.draw(self.screen)
 
-                for i in self.scrap:
-                    i.draw(self.screen)
                 self.player.draw(self.screen)
                 
 
